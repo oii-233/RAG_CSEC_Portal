@@ -1,10 +1,39 @@
-const mongoose = require('mongoose');
+import mongoose, { Document, Schema, Model } from 'mongoose';
+import { IUser } from './User';
+
+/**
+ * Document interface - defines the shape of a Document document
+ */
+export interface IDocument extends Document {
+    _id: mongoose.Types.ObjectId;
+    title: string;
+    content: string;
+    category: 'safety' | 'emergency' | 'policy' | 'procedure' | 'resource' | 'other';
+    embedding: number[];
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
+    uploadedBy: mongoose.Types.ObjectId | IUser;
+    isPublic: boolean;
+    tags: string[];
+    viewCount: number;
+    createdAt: Date;
+    updatedAt: Date;
+    incrementViewCount(): Promise<void>;
+}
+
+/**
+ * Document Model with static methods
+ */
+export interface IDocumentModel extends Model<IDocument> {
+    findSimilar(keywords: string, limit?: number): Promise<IDocument[]>;
+}
 
 /**
  * Document Schema
  * Stores uploaded documents with embeddings for RAG system
  */
-const documentSchema = new mongoose.Schema(
+const documentSchema = new Schema<IDocument, IDocumentModel>(
     {
         title: {
             type: String,
@@ -40,7 +69,7 @@ const documentSchema = new mongoose.Schema(
             type: Number // Size in bytes
         },
         uploadedBy: {
-            type: mongoose.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'User',
             required: true
         },
@@ -75,7 +104,7 @@ documentSchema.index({ category: 1, isPublic: 1 });
 /**
  * Method to increment view count
  */
-documentSchema.methods.incrementViewCount = async function () {
+documentSchema.methods.incrementViewCount = async function (): Promise<void> {
     this.viewCount += 1;
     await this.save();
 };
@@ -84,7 +113,10 @@ documentSchema.methods.incrementViewCount = async function () {
  * Static method to find similar documents (basic implementation)
  * In production, use vector similarity search
  */
-documentSchema.statics.findSimilar = async function (keywords, limit = 5) {
+documentSchema.statics.findSimilar = async function (
+    keywords: string,
+    limit: number = 5
+): Promise<IDocument[]> {
     try {
         return await this.find(
             {
@@ -102,4 +134,6 @@ documentSchema.statics.findSimilar = async function (keywords, limit = 5) {
     }
 };
 
-module.exports = mongoose.model('Document', documentSchema);
+const DocumentModel: IDocumentModel = mongoose.model<IDocument, IDocumentModel>('Document', documentSchema);
+
+export default DocumentModel;

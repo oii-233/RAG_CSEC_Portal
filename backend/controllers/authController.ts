@@ -1,13 +1,15 @@
-const jwt = require('jsonwebtoken');
-const { validationResult } = require('express-validator');
-const User = require('../models/User');
+import { Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { validationResult, Result, ValidationError } from 'express-validator';
+import User from '../models/User';
+import { IAuthRequest } from '../types';
 
 /**
  * Generate JWT Token
  * @param {string} id - User ID
  * @returns {string} JWT Token
  */
-const generateToken = (id) => {
+const generateToken = (id: string): string => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: '7d' // Token expires in 7 days
     });
@@ -18,19 +20,20 @@ const generateToken = (id) => {
  * @route   POST /api/auth/signup
  * @access  Public
  */
-const signup = async (req, res) => {
+export const signup = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
         console.log('📝 Signup attempt:', req.body.email);
 
         // Validate request
-        const errors = validationResult(req);
+        const errors: Result<ValidationError> = validationResult(req);
         if (!errors.isEmpty()) {
             console.log('❌ Validation errors:', errors.array());
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Validation failed',
                 errors: errors.array()
             });
+            return;
         }
 
         const { name, email, password, role } = req.body;
@@ -39,10 +42,11 @@ const signup = async (req, res) => {
         const userExists = await User.findOne({ email });
         if (userExists) {
             console.log('❌ User already exists:', email);
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'User already exists with this email'
             });
+            return;
         }
 
         // Create user
@@ -56,7 +60,7 @@ const signup = async (req, res) => {
         console.log('✅ User created successfully:', user.email);
 
         // Generate JWT token
-        const token = generateToken(user._id);
+        const token = generateToken(user._id.toString());
 
         // Return user data and token
         res.status(201).json({
@@ -74,11 +78,12 @@ const signup = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Signup error:', error);
+        const err = error as Error;
+        console.error('❌ Signup error:', err);
         res.status(500).json({
             success: false,
             message: 'Error registering user',
-            error: error.message
+            error: err.message
         });
     }
 };
@@ -88,19 +93,20 @@ const signup = async (req, res) => {
  * @route   POST /api/auth/login
  * @access  Public
  */
-const login = async (req, res) => {
+export const login = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
         console.log('🔐 Login attempt:', req.body.email);
 
         // Validate request
-        const errors = validationResult(req);
+        const errors: Result<ValidationError> = validationResult(req);
         if (!errors.isEmpty()) {
             console.log('❌ Validation errors:', errors.array());
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Validation failed',
                 errors: errors.array()
             });
+            return;
         }
 
         const { email, password } = req.body;
@@ -109,35 +115,38 @@ const login = async (req, res) => {
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
             console.log('❌ User not found:', email);
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
             });
+            return;
         }
 
         // Check if user is active
         if (!user.isActive) {
             console.log('❌ User account deactivated:', email);
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Your account has been deactivated'
             });
+            return;
         }
 
         // Verify password
         const isPasswordMatch = await user.matchPassword(password);
         if (!isPasswordMatch) {
             console.log('❌ Invalid password for user:', email);
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
             });
+            return;
         }
 
         console.log('✅ Login successful:', user.email);
 
         // Generate JWT token
-        const token = generateToken(user._id);
+        const token = generateToken(user._id.toString());
 
         // Return user data and token
         res.status(200).json({
@@ -155,11 +164,12 @@ const login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Login error:', error);
+        const err = error as Error;
+        console.error('❌ Login error:', err);
         res.status(500).json({
             success: false,
             message: 'Error logging in',
-            error: error.message
+            error: err.message
         });
     }
 };
@@ -169,31 +179,50 @@ const login = async (req, res) => {
  * @route   GET /api/auth/me
  * @access  Private
  */
-const getCurrentUser = async (req, res) => {
+export const getCurrentUser = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                message: 'Not authorized'
+            });
+            return;
+        }
+
         console.log('👤 Get current user:', req.user.email);
+
+        // Fetch full user data
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+            return;
+        }
 
         // User is already attached to request by auth middleware
         res.status(200).json({
             success: true,
             data: {
                 user: {
-                    id: req.user._id,
-                    name: req.user.name,
-                    email: req.user.email,
-                    role: req.user.role,
-                    isActive: req.user.isActive,
-                    createdAt: req.user.createdAt,
-                    updatedAt: req.user.updatedAt
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    isActive: user.isActive,
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt
                 }
             }
         });
     } catch (error) {
-        console.error('❌ Get current user error:', error);
+        const err = error as Error;
+        console.error('❌ Get current user error:', err);
         res.status(500).json({
             success: false,
             message: 'Error fetching user data',
-            error: error.message
+            error: err.message
         });
     }
 };
@@ -203,18 +232,27 @@ const getCurrentUser = async (req, res) => {
  * @route   PUT /api/auth/profile
  * @access  Private
  */
-const updateProfile = async (req, res) => {
+export const updateProfile = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                message: 'Not authorized'
+            });
+            return;
+        }
+
         console.log('📝 Update profile:', req.user.email);
 
         const { name, email } = req.body;
 
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
+            return;
         }
 
         // Update fields
@@ -223,10 +261,11 @@ const updateProfile = async (req, res) => {
             // Check if new email already exists
             const emailExists = await User.findOne({ email, _id: { $ne: user._id } });
             if (emailExists) {
-                return res.status(400).json({
+                res.status(400).json({
                     success: false,
                     message: 'Email already in use'
                 });
+                return;
             }
             user.email = email;
         }
@@ -249,18 +288,12 @@ const updateProfile = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Update profile error:', error);
+        const err = error as Error;
+        console.error('❌ Update profile error:', err);
         res.status(500).json({
             success: false,
             message: 'Error updating profile',
-            error: error.message
+            error: err.message
         });
     }
-};
-
-module.exports = {
-    signup,
-    login,
-    getCurrentUser,
-    updateProfile
 };

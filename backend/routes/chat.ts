@@ -1,13 +1,13 @@
-const express = require('express');
-const { body } = require('express-validator');
-const {
+import express, { Router } from 'express';
+import { body } from 'express-validator';
+import {
     askQuestion,
     uploadDocument,
     getDocuments
-} = require('../controllers/chatController');
-const { protect, authorize } = require('../middleware/auth');
+} from '../controllers/chatController';
+import { protect, authorize } from '../middleware/auth';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 /**
  * @route   POST /api/chat/ask
@@ -69,4 +69,4 @@ router.post(
  */
 router.get('/documents', protect, getDocuments);
 
-module.exports = router;
+export default router;

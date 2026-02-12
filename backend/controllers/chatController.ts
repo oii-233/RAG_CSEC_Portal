@@ -1,6 +1,17 @@
-const axios = require('axios');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const Document = require('../models/Document');
+import { Response } from 'express';
+import axios, { AxiosResponse } from 'axios';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import DocumentModel, { IDocument } from '../models/Document';
+import { IAuthRequest } from '../types';
+
+/**
+ * Voyage AI API response structure
+ */
+interface VoyageEmbeddingResponse {
+    data: Array<{
+        embedding: number[];
+    }>;
+}
 
 /**
  * Initialize Google Gemini AI
@@ -10,13 +21,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 /**
  * Generate text embeddings using Voyage AI
  * @param {string} text - Text to embed
- * @returns {Promise<Array>} Embedding vector
+ * @returns {Promise<number[] | null>} Embedding vector
  */
-const generateEmbedding = async (text) => {
+const generateEmbedding = async (text: string): Promise<number[] | null> => {
     try {
         console.log('🔢 Generating embedding for text:', text.substring(0, 50) + '...');
 
-        const response = await axios.post(
+        const response: AxiosResponse<VoyageEmbeddingResponse> = await axios.post(
             'https://api.voyageai.com/v1/embeddings',
             {
                 input: text,
@@ -37,11 +48,12 @@ const generateEmbedding = async (text) => {
 
         throw new Error('Invalid response from Voyage AI');
     } catch (error) {
-        console.error('❌ Error generating embedding:', error.message);
+        const err = error as any;
+        console.error('❌ Error generating embedding:', err.message);
 
         // If Voyage AI fails, return null (we'll use text search instead)
-        if (error.response) {
-            console.error('Voyage AI API error:', error.response.data);
+        if (err.response) {
+            console.error('Voyage AI API error:', err.response.data);
         }
         return null;
     }
@@ -51,14 +63,14 @@ const generateEmbedding = async (text) => {
  * Find relevant documents for RAG
  * @param {string} query - User query
  * @param {number} limit - Max documents to return
- * @returns {Promise<Array>} Relevant documents
+ * @returns {Promise<IDocument[]>} Relevant documents
  */
-const findRelevantDocuments = async (query, limit = 3) => {
+const findRelevantDocuments = async (query: string, limit: number = 3): Promise<IDocument[]> => {
     try {
         console.log('🔍 Searching for relevant documents...');
 
         // Try to use text search
-        const documents = await Document.findSimilar(query, limit);
+        const documents = await DocumentModel.findSimilar(query, limit);
 
         if (documents && documents.length > 0) {
             console.log(`✅ Found ${documents.length} relevant documents`);
@@ -76,10 +88,10 @@ const findRelevantDocuments = async (query, limit = 3) => {
 /**
  * Generate AI response using Google Gemini
  * @param {string} question - User question
- * @param {Array} context - Relevant documents for context
+ * @param {IDocument[]} context - Relevant documents for context
  * @returns {Promise<string>} AI response
  */
-const generateAIResponse = async (question, context = []) => {
+const generateAIResponse = async (question: string, context: IDocument[] = []): Promise<string> => {
     try {
         console.log('🤖 Generating AI response with Gemini...');
 
@@ -119,9 +131,10 @@ Always prioritize student safety and well-being in your responses.`;
 
         return text;
     } catch (error) {
-        console.error('❌ Error generating AI response:', error.message);
+        const err = error as Error;
+        console.error('❌ Error generating AI response:', err.message);
 
-        if (error.message && error.message.includes('API_KEY')) {
+        if (err.message && err.message.includes('API_KEY')) {
             throw new Error('Gemini API key is invalid or missing');
         }
 
@@ -135,26 +148,36 @@ Always prioritize student safety and well-being in your responses.`;
  * @route   POST /api/chat/ask
  * @access  Private
  */
-const askQuestion = async (req, res) => {
+export const askQuestion = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
         const { question } = req.body;
+
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                message: 'Not authorized'
+            });
+            return;
+        }
 
         console.log('💬 Chat request from user:', req.user.email);
         console.log('Question:', question);
 
         // Validate question
         if (!question || question.trim().length === 0) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Please provide a question'
             });
+            return;
         }
 
         if (question.length > 1000) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Question is too long (max 1000 characters)'
             });
+            return;
         }
 
         // Step 1: Find relevant documents (RAG retrieval)
@@ -180,11 +203,12 @@ const askQuestion = async (req, res) => {
 
         console.log('✅ Chat response sent successfully');
     } catch (error) {
-        console.error('❌ Chat error:', error);
+        const err = error as Error;
+        console.error('❌ Chat error:', err);
         res.status(500).json({
             success: false,
             message: 'Error processing your question',
-            error: error.message
+            error: err.message
         });
     }
 };
@@ -194,31 +218,40 @@ const askQuestion = async (req, res) => {
  * @route   POST /api/chat/upload
  * @access  Private (Admin only)
  */
-const uploadDocument = async (req, res) => {
+export const uploadDocument = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
         const { title, content, category, tags } = req.body;
+
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                message: 'Not authorized'
+            });
+            return;
+        }
 
         console.log('📄 Document upload from user:', req.user.email);
 
         // Validate input
         if (!title || !content) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Please provide title and content'
             });
+            return;
         }
 
         // Generate embedding for the document
         const embedding = await generateEmbedding(content);
 
         // Create document
-        const document = await Document.create({
+        const document = await DocumentModel.create({
             title,
             content,
             category: category || 'other',
             tags: tags || [],
             embedding,
-            uploadedBy: req.user._id,
+            uploadedBy: req.user.id,
             isPublic: true
         });
 
@@ -237,11 +270,12 @@ const uploadDocument = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Document upload error:', error);
+        const err = error as Error;
+        console.error('❌ Document upload error:', err);
         res.status(500).json({
             success: false,
             message: 'Error uploading document',
-            error: error.message
+            error: err.message
         });
     }
 };
@@ -251,27 +285,31 @@ const uploadDocument = async (req, res) => {
  * @route   GET /api/chat/documents
  * @access  Private
  */
-const getDocuments = async (req, res) => {
+export const getDocuments = async (req: IAuthRequest, res: Response): Promise<void> => {
     try {
-        const { category, search, limit = 20, page = 1 } = req.query;
+        const { category, search, limit = '20', page = '1' } = req.query;
 
         console.log('📚 Fetching documents...');
 
         // Build query
-        const query = { isPublic: true };
+        const query: any = { isPublic: true };
         if (category) query.category = category;
         if (search) {
-            query.$text = { $search: search };
+            query.$text = { $search: search as string };
         }
 
+        // Parse pagination params
+        const limitNum = parseInt(limit as string);
+        const pageNum = parseInt(page as string);
+
         // Execute query with pagination
-        const documents = await Document.find(query)
+        const documents = await DocumentModel.find(query)
             .populate('uploadedBy', 'name email')
             .sort({ createdAt: -1 })
-            .limit(parseInt(limit))
-            .skip((parseInt(page) - 1) * parseInt(limit));
+            .limit(limitNum)
+            .skip((pageNum - 1) * limitNum);
 
-        const total = await Document.countDocuments(query);
+        const total = await DocumentModel.countDocuments(query);
 
         res.status(200).json({
             success: true,
@@ -279,23 +317,18 @@ const getDocuments = async (req, res) => {
                 documents,
                 pagination: {
                     total,
-                    page: parseInt(page),
-                    pages: Math.ceil(total / parseInt(limit))
+                    page: pageNum,
+                    pages: Math.ceil(total / limitNum)
                 }
             }
         });
     } catch (error) {
-        console.error('❌ Get documents error:', error);
+        const err = error as Error;
+        console.error('❌ Get documents error:', err);
         res.status(500).json({
             success: false,
             message: 'Error fetching documents',
-            error: error.message
+            error: err.message
         });
     }
-};
-
-module.exports = {
-    askQuestion,
-    uploadDocument,
-    getDocuments
 };

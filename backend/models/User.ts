@@ -1,11 +1,26 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose, { Document, Schema, Model } from 'mongoose';
+import bcrypt from 'bcryptjs';
+
+/**
+ * User interface - defines the shape of a User document
+ */
+export interface IUser extends Document {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    email: string;
+    password: string;
+    role: 'student' | 'admin' | 'staff';
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    matchPassword(enteredPassword: string): Promise<boolean>;
+}
 
 /**
  * User Schema
  * Handles user authentication and profile data
  */
-const userSchema = new mongoose.Schema(
+const userSchema = new Schema<IUser>(
     {
         name: {
             type: String,
@@ -68,7 +83,7 @@ userSchema.pre('save', async function (next) {
         next();
     } catch (error) {
         console.error('❌ Error hashing password:', error);
-        next(error);
+        next(error as Error);
     }
 });
 
@@ -77,7 +92,7 @@ userSchema.pre('save', async function (next) {
  * @param {string} enteredPassword - Plain text password to compare
  * @returns {Promise<boolean>} - True if passwords match, false otherwise
  */
-userSchema.methods.matchPassword = async function (enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword: string): Promise<boolean> {
     try {
         return await bcrypt.compare(enteredPassword, this.password);
     } catch (error) {
@@ -96,4 +111,6 @@ userSchema.methods.toJSON = function () {
     return user;
 };
 
-module.exports = mongoose.model('User', userSchema);
+const User: Model<IUser> = mongoose.model<IUser>('User', userSchema);
+
+export default User;

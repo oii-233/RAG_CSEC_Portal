@@ -1,14 +1,14 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
+import 'dotenv/config';
+import express, { Application, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import connectDB from './config/db';
 
 // Import routes
-const authRoutes = require('./routes/auth');
-const chatRoutes = require('./routes/chat');
+import authRoutes from './routes/auth';
+import chatRoutes from './routes/chat';
 
 // Initialize Express app
-const app = express();
+const app: Application = express();
 
 // ============================================
 // MIDDLEWARE CONFIGURATION
@@ -28,7 +28,7 @@ app.use(cors(corsOptions));
 
 // Request logging middleware (development)
 if (process.env.NODE_ENV === 'development') {
-    app.use((req, res, next) => {
+    app.use((req: Request, _res: Response, next: NextFunction) => {
         console.log(`📨 ${req.method} ${req.path} - ${new Date().toISOString()}`);
         next();
     });
@@ -39,7 +39,7 @@ if (process.env.NODE_ENV === 'development') {
 // ============================================
 
 // Health check route
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
     res.json({
         success: true,
         message: 'ASTU Smart Campus Safety API - Server is running',
@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
 });
 
 // API status route
-app.get('/api/status', (req, res) => {
+app.get('/api/status', (req: Request, res: Response) => {
     res.json({
         success: true,
         status: 'operational',
@@ -67,7 +67,7 @@ app.use('/api/chat', chatRoutes);
 // ============================================
 
 // 404 handler - Route not found
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, _next: NextFunction) => {
     res.status(404).json({
         success: false,
         message: `Route ${req.originalUrl} not found`
@@ -75,12 +75,12 @@ app.use((req, res, next) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error('❌ Error:', err.stack);
 
     // Mongoose validation error
     if (err.name === 'ValidationError') {
-        const errors = Object.values(err.errors).map(e => e.message);
+        const errors = Object.values(err.errors).map((e: any) => e.message);
         return res.status(400).json({
             success: false,
             message: 'Validation Error',
@@ -90,7 +90,7 @@ app.use((err, req, res, next) => {
 
     // Mongoose duplicate key error
     if (err.code === 11000) {
-        const field = Object.keys(err.keyPattern)[0];
+        const field = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'field';
         return res.status(400).json({
             success: false,
             message: `${field} already exists`
@@ -127,7 +127,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 // Connect to database and start server
-const startServer = async () => {
+const startServer = async (): Promise<void> => {
     try {
         // Connect to MongoDB
         await connectDB();
@@ -158,14 +158,14 @@ const startServer = async () => {
 };
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
+process.on('unhandledRejection', (err: Error) => {
     console.error('❌ Unhandled Promise Rejection:', err);
     // Close server & exit process
     process.exit(1);
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', (err: Error) => {
     console.error('❌ Uncaught Exception:', err);
     process.exit(1);
 });
