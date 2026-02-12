@@ -1,13 +1,37 @@
 import express, { Router } from 'express';
 import { body } from 'express-validator';
+import multer from 'multer';
 import {
     askQuestion,
     uploadDocument,
-    getDocuments
+    uploadFile,
+    getDocuments,
+    deleteDocument
 } from '../controllers/chatController';
 import { protect, authorize } from '../middleware/auth';
 
 const router: Router = express.Router();
+
+// Multer configuration for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: (_req, file, cb) => {
+        if (
+            file.mimetype === 'application/pdf' ||
+            file.mimetype === 'text/plain' ||
+            file.originalname.endsWith('.pdf') ||
+            file.originalname.endsWith('.txt')
+        ) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only .pdf and .txt files are supported'));
+        }
+    }
+});
 
 /**
  * @route   POST /api/chat/ask
@@ -29,12 +53,12 @@ router.post(
 );
 
 /**
- * @route   POST /api/chat/upload
- * @desc    Upload document for RAG system
- * @access  Private (Admin only)
+ * @route   POST /api/chat/upload/text
+ * @desc    Upload document text for RAG system (with automatic chunking)
+ * @access  Private (Admin/Staff only)
  */
 router.post(
-    '/upload',
+    '/upload/text',
     protect,
     authorize('admin', 'staff'),
     [
@@ -63,10 +87,30 @@ router.post(
 );
 
 /**
+ * @route   POST /api/chat/upload/file
+ * @desc    Upload document file for RAG system (PDF/TXT)
+ * @access  Private (Admin/Staff only)
+ */
+router.post(
+    '/upload/file',
+    protect,
+    authorize('admin', 'staff'),
+    upload.single('file'),
+    uploadFile
+);
+
+/**
  * @route   GET /api/chat/documents
  * @desc    Get all documents
  * @access  Private
  */
 router.get('/documents', protect, getDocuments);
+
+/**
+ * @route   DELETE /api/chat/documents/:id
+ * @desc    Delete document and its chunks
+ * @access  Private (Admin/Staff only)
+ */
+router.delete('/documents/:id', protect, authorize('admin', 'staff'), deleteDocument);
 
 export default router;

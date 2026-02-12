@@ -8,6 +8,7 @@ export interface IUser extends Document {
     _id: mongoose.Types.ObjectId;
     name: string;
     email: string;
+    universityId: string;
     password: string;
     role: 'student' | 'admin' | 'staff';
     isActive: boolean;
@@ -37,6 +38,16 @@ const userSchema = new Schema<IUser>(
             match: [
                 /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
                 'Please add a valid email'
+            ]
+        },
+        universityId: {
+            type: String,
+            required: [true, 'Please add a university ID'],
+            unique: true,
+            trim: true,
+            match: [
+                /^ugr\/\d{5}\/\d{2}$/i,
+                'Please add a valid university ID (format: ugr/XXXXX/XX)'
             ]
         },
         password: {
@@ -112,5 +123,5 @@ userSchema.methods.toJSON = function () {
 };
 
 const User: Model<IUser> = mongoose.model<IUser>('User', userSchema);
-
+export { User };
 export default User;

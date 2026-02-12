@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { validationResult, Result, ValidationError } from 'express-validator';
-import User from '../models/User';
+import { User } from '../models/User';
 import { IAuthRequest } from '../types';
 
 /**
@@ -36,7 +36,7 @@ export const signup = async (req: IAuthRequest, res: Response): Promise<void> =>
             return;
         }
 
-        const { name, email, password, role } = req.body;
+        const { name, email, universityId, password, role } = req.body;
 
         // Check if user already exists
         const userExists = await User.findOne({ email });
@@ -53,6 +53,7 @@ export const signup = async (req: IAuthRequest, res: Response): Promise<void> =>
         const user = await User.create({
             name,
             email,
+            universityId,
             password, // Will be hashed by pre-save middleware
             role: role || 'student'
         });
@@ -71,6 +72,7 @@ export const signup = async (req: IAuthRequest, res: Response): Promise<void> =>
                     id: user._id,
                     name: user.name,
                     email: user.email,
+                    universityId: user.universityId,
                     role: user.role,
                     createdAt: user.createdAt
                 },
@@ -157,6 +159,7 @@ export const login = async (req: IAuthRequest, res: Response): Promise<void> => 
                     id: user._id,
                     name: user.name,
                     email: user.email,
+                    universityId: user.universityId,
                     role: user.role,
                     createdAt: user.createdAt
                 },
@@ -209,6 +212,7 @@ export const getCurrentUser = async (req: IAuthRequest, res: Response): Promise<
                     id: user._id,
                     name: user.name,
                     email: user.email,
+                    universityId: user.universityId,
                     role: user.role,
                     isActive: user.isActive,
                     createdAt: user.createdAt,

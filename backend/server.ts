@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import chatRoutes from './routes/chat';
 
 // Initialize Express app
+console.log('🏁 Server.ts Initializing...');
 const app: Application = express();
 
 // ============================================
@@ -39,7 +40,7 @@ if (process.env.NODE_ENV === 'development') {
 // ============================================
 
 // Health check route
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
     res.json({
         success: true,
         message: 'ASTU Smart Campus Safety API - Server is running',
@@ -49,7 +50,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // API status route
-app.get('/api/status', (req: Request, res: Response) => {
+app.get('/api/status', (_req: Request, res: Response) => {
     res.json({
         success: true,
         status: 'operational',
@@ -113,7 +114,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     }
 
     // Default error
-    res.status(err.statusCode || 500).json({
+    return res.status(err.statusCode || 500).json({
         success: false,
         message: err.message || 'Server Error',
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
@@ -142,13 +143,14 @@ const startServer = async (): Promise<void> => {
             console.log(`📡 API Base: http://localhost:${PORT}/api`);
             console.log('='.repeat(50));
             console.log('📚 Available Routes:');
-            console.log('   GET  /api/status          - API status');
-            console.log('   POST /api/auth/signup     - Register user');
-            console.log('   POST /api/auth/login      - Login user');
-            console.log('   GET  /api/auth/me         - Get current user');
-            console.log('   POST /api/chat/ask        - Ask chatbot');
-            console.log('   POST /api/chat/upload     - Upload document (admin)');
-            console.log('   GET  /api/chat/documents  - Get documents');
+            console.log('   GET  /api/status                - API status');
+            console.log('   POST /api/auth/signup           - Register user');
+            console.log('   POST /api/auth/login            - Login user');
+            console.log('   GET  /api/auth/me               - Get current user');
+            console.log('   POST /api/chat/ask              - Ask chatbot');
+            console.log('   POST /api/chat/upload/text      - Upload document (admin)');
+            console.log('   GET  /api/chat/documents        - Get documents');
+            console.log('   DELETE /api/chat/documents/:id  - Delete document (admin)');
             console.log('='.repeat(50));
         });
     } catch (error) {

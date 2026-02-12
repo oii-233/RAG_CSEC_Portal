@@ -31,6 +31,12 @@ router.post(
             .isEmail()
             .withMessage('Please provide a valid email')
             .normalizeEmail(),
+        body('universityId')
+            .trim()
+            .notEmpty()
+            .withMessage('University ID is required')
+            .matches(/^ugr\/\d{5}\/\d{2}$/i)
+            .withMessage('Please provide a valid university ID (format: ugr/XXXXX/XX)'),
         body('password')
             .notEmpty()
             .withMessage('Password is required')

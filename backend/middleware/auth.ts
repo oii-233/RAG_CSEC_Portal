@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
+console.log('🚀 Auth Middleware Loaded');
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import mongoose from 'mongoose';
+import { User } from '../models/User';
 import { IAuthRequest, IUserPayload } from '../types';
 
 /**
@@ -42,7 +44,17 @@ export const protect = async (
             console.log('✅ Token verified for user ID:', decoded.id);
 
             // Get user from token (exclude password)
-            const user = await User.findById(decoded.id).select('-password');
+            // Use a robust way to get the model to avoid "not a function" errors
+            const UserModel = mongoose.models.User || User;
+
+            if (!UserModel || typeof UserModel.findById !== 'function') {
+                console.error('❌ Model Resolution Error: UserModel is not a valid Mongoose model');
+                console.log('   UserModel keys:', Object.keys(UserModel || {}));
+                res.status(500).json({ success: false, message: 'Internal Server Error: Model initialization failed' });
+                return;
+            }
+
+            const user = await UserModel.findById(decoded.id).select('-password');
 
             if (!user) {
                 console.log('❌ User not found for token');
@@ -72,11 +84,10 @@ export const protect = async (
 
             console.log('✅ User authenticated:', user.email);
             next();
-        } catch (error) {
-            const err = error as Error & { name?: string };
-            console.error('❌ Token verification failed:', err.message);
+        } catch (error: any) {
+            console.error('❌ Auth Verification Error:', error.message);
 
-            if (err.name === 'TokenExpiredError') {
+            if (error.name === 'TokenExpiredError') {
                 res.status(401).json({
                     success: false,
                     message: 'Token expired, please login again'
@@ -86,7 +97,7 @@ export const protect = async (
 
             res.status(401).json({
                 success: false,
-                message: 'Not authorized, token failed'
+                message: error.message || 'Not authorized, token failed'
             });
             return;
         }

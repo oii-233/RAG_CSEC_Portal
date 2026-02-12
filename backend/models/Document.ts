@@ -17,6 +17,11 @@ export interface IDocument extends Document {
     isPublic: boolean;
     tags: string[];
     viewCount: number;
+    // Chunking support
+    isChunk: boolean;
+    parentDocumentId?: mongoose.Types.ObjectId;
+    chunkIndex?: number;
+    chunkCount?: number;
     createdAt: Date;
     updatedAt: Date;
     incrementViewCount(): Promise<void>;
@@ -27,6 +32,7 @@ export interface IDocument extends Document {
  */
 export interface IDocumentModel extends Model<IDocument> {
     findSimilar(keywords: string, limit?: number): Promise<IDocument[]>;
+    vectorSearch(queryEmbedding: number[], limit?: number): Promise<Array<IDocument & { similarity: number }>>;
 }
 
 /**
@@ -84,6 +90,24 @@ const documentSchema = new Schema<IDocument, IDocumentModel>(
         viewCount: {
             type: Number,
             default: 0
+        },
+        // Chunking fields
+        isChunk: {
+            type: Boolean,
+            default: false
+        },
+        parentDocumentId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Document',
+            required: false
+        },
+        chunkIndex: {
+            type: Number,
+            required: false
+        },
+        chunkCount: {
+            type: Number,
+            required: false
         }
     },
     {
@@ -107,6 +131,51 @@ documentSchema.index({ category: 1, isPublic: 1 });
 documentSchema.methods.incrementViewCount = async function (): Promise<void> {
     this.viewCount += 1;
     await this.save();
+};
+
+/**
+ * Static method to find similar documents using Atlas Vector Search
+ * @param queryEmbedding - The embedding vector for the query
+ * @param limit - Max results to return
+ */
+documentSchema.statics.vectorSearch = async function (
+    queryEmbedding: number[],
+    limit: number = 3
+): Promise<Array<IDocument & { similarity: number }>> {
+    try {
+        console.log(`🔍 Executing Atlas Vector Search (limit: ${limit})...`);
+
+        const results = await this.aggregate([
+            {
+                $vectorSearch: {
+                    index: 'vertex_search',
+                    path: 'embedding',
+                    queryVector: queryEmbedding,
+                    numCandidates: limit * 10,
+                    limit: limit
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    title: 1,
+                    content: 1,
+                    category: 1,
+                    tags: 1,
+                    isChunk: 1,
+                    parentDocumentId: 1,
+                    chunkIndex: 1,
+                    chunkCount: 1,
+                    similarity: { $meta: 'vectorSearchScore' }
+                }
+            }
+        ]);
+
+        return results;
+    } catch (error) {
+        console.error('❌ Atlas Vector Search failed:', error);
+        throw error;
+    }
 };
 
 /**
