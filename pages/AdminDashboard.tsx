@@ -2,8 +2,8 @@
 import React from 'react';
 import { Report, ReportStatus, ReportType } from '../types';
 import { Icons } from '../constants';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 
@@ -55,11 +55,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, onManageAll })
             {recentUrgent.length > 0 ? recentUrgent.map((item, i) => (
               <div key={i} className="px-10 py-8 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex gap-6 items-center">
-                   <div className="bg-red-100 p-3 rounded-2xl text-red-600"><Icons.Alert /></div>
-                   <div>
-                     <p className="font-black text-[#0F2A3D] leading-none mb-1 uppercase tracking-tight">{item.category}</p>
-                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.location} • ID: {item.id}</p>
-                   </div>
+                  <div className="bg-red-100 p-3 rounded-2xl text-red-600"><Icons.Alert /></div>
+                  <div>
+                    <p className="font-black text-[#0F2A3D] leading-none mb-1 uppercase tracking-tight">{item.category}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.location} • ID: {item.id}</p>
+                  </div>
                 </div>
                 <span className="bg-red-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">{item.priority}</span>
               </div>
@@ -73,34 +73,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, onManageAll })
         <div className="bg-[#0F2A3D] p-10 rounded-[48px] shadow-xl text-white">
           <h3 className="font-black uppercase tracking-widest text-xs mb-10 text-gray-400">Departmental Distribution</h3>
           <div className="h-64 flex flex-col items-center">
-             <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={10} dataKey="value">
-                    {pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index]} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '16px', backgroundColor: '#0F2A3D', border: '1px solid #17A2B8', color: '#fff' }} />
-                </PieChart>
-             </ResponsiveContainer>
-             <div className="flex gap-8 mt-6">
-                {pieData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }}></div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">{d.name}: {d.value}</span>
-                  </div>
-                ))}
-             </div>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={10} dataKey="value">
+                  {pieData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index]} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: '16px', backgroundColor: '#0F2A3D', border: '1px solid #17A2B8', color: '#fff' }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex gap-8 mt-6">
+              {pieData.map((d, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }}></div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">{d.name}: {d.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      
+
       <div className="bg-[#17A2B8]/5 p-8 rounded-[40px] border border-[#17A2B8]/10 flex items-center gap-8">
-         <div className="bg-[#17A2B8] text-white p-4 rounded-3xl"><Icons.Shield /></div>
-         <div>
-           <h4 className="font-black text-[#0F2A3D] uppercase tracking-widest text-xs mb-1">Administrative Note</h4>
-           <p className="text-gray-500 text-sm font-medium leading-relaxed">System is performing real-time embedding sync with university databases. All logged sessions are recorded for audit compliance.</p>
-         </div>
+        <div className="bg-[#17A2B8] text-white p-4 rounded-3xl"><Icons.Shield /></div>
+        <div>
+          <h4 className="font-black text-[#0F2A3D] uppercase tracking-widest text-xs mb-1">Administrative Note</h4>
+          <p className="text-gray-500 text-sm font-medium leading-relaxed">System is performing real-time embedding sync with university databases. All logged sessions are recorded for audit compliance.</p>
+        </div>
       </div>
     </div>
   );

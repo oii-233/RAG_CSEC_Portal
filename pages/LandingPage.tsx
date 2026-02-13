@@ -19,13 +19,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <div className="bg-white p-1 rounded-lg">
             <Icons.ASTULogo />
           </div>
-          <span className="font-bold text-xl text-[#0F2A3D]">ASTU Safety</span>
+          <span className="font-bold text-xl text-[#0F2A3D]">ዘብ AI</span>
         </div>
         <div className="hidden md:flex items-center gap-8 font-medium text-gray-600">
           <a href="#" className="hover:text-[#17A2B8] transition-colors">Home</a>
           <button onClick={scrollToHowItWorks} className="hover:text-[#17A2B8] transition-colors">How It Works</button>
           <a href="mailto:security@astu.edu.et" className="hover:text-[#17A2B8] transition-colors">Contact</a>
-          <button 
+          <button
             onClick={onGetStarted}
             className="bg-[#17A2B8] text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all font-semibold shadow-md"
           >
@@ -36,7 +36,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-[#17A2B8] to-[#17A2B8]/10 py-24 px-12 overflow-hidden">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
+        {/* Background Image with Mask (Right focused, left faded) */}
+        <div
+          className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-overlay"
+          style={{
+            backgroundImage: 'url(/bg.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'right center',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 80%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 80%)'
+          }}
+        />
+
+        <div className="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
           <div className="flex-1 space-y-8 text-center md:text-left">
             <h1 className="text-5xl md:text-6xl font-extrabold text-[#0F2A3D] leading-tight">
               Your Safety. <br />
@@ -47,13 +59,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               Report incidents, access verified campus information, and stay informed at Adama Science and Technology University.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <button 
+              <button
                 onClick={onGetStarted}
                 className="bg-[#17A2B8] text-white px-8 py-4 rounded-xl text-lg font-bold shadow-xl hover:-translate-y-1 transition-all"
               >
                 Login to Report an Issue
               </button>
-              <button 
+              <button
                 onClick={scrollToHowItWorks}
                 className="bg-white/20 border border-white/40 text-[#0F2A3D] px-8 py-4 rounded-xl text-lg font-bold backdrop-blur-sm hover:bg-white/30 transition-all"
               >
@@ -67,7 +79,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
               <div className="absolute inset-10 bg-white/20 rounded-full"></div>
               <div className="absolute inset-20 bg-white/30 rounded-full flex items-center justify-center">
                 <div className="text-white transform scale-[3]">
-                  <Icons.ASTULogo />
+                  <Icons.Shield />
                 </div>
               </div>
             </div>
@@ -84,20 +96,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { 
-                title: "Authenticate", 
-                desc: "Securely log in with your verified University Student ID and credentials.", 
-                icon: Icons.User 
+              {
+                title: "Authenticate",
+                desc: "Securely log in with your verified University Student ID and credentials.",
+                icon: Icons.User
               },
-              { 
-                title: "Report or Ask", 
-                desc: "Submit detailed incident reports or ask our AI assistant for policy information.", 
-                icon: Icons.Shield 
+              {
+                title: "Report or Ask",
+                desc: "Submit detailed incident reports or ask our AI assistant for policy information.",
+                icon: Icons.Shield
               },
-              { 
-                title: "Track Resolution", 
-                desc: "Monitor the status of your submissions in real-time as they are handled by authorities.", 
-                icon: Icons.Bell 
+              {
+                title: "Track Resolution",
+                desc: "Monitor the status of your submissions in real-time as they are handled by authorities.",
+                icon: Icons.Bell
               },
             ].map((step, i) => (
               <div key={i} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center space-y-4 hover:shadow-md transition-shadow">
@@ -118,7 +130,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Icons.Shield />
-              <span className="font-bold text-xl">ASTU Safety</span>
+              <span className="font-bold text-xl">ዘብ AI</span>
             </div>
             <p className="text-gray-400 text-sm">
               Securing the future of Adama Science and Technology University through digital innovation.

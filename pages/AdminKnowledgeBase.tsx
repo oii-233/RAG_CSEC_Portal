@@ -1,74 +1,94 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { KnowledgeItem } from '../types';
 import { Icons, COLORS } from '../constants';
+import { chatService } from '../services/chatService';
 
 const AdminKnowledgeBase: React.FC = () => {
   const [isRebuilding, setIsRebuilding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([
-    { id: 'K1', title: 'Student Safety Handbook 2024', category: 'SECURITY', sourceType: 'PDF', lastUpdated: '2023-10-15', status: 'EMBEDDED' },
-    { id: 'K2', title: 'Campus Maintenance Protocols', category: 'MAINTENANCE', sourceType: 'DOC', lastUpdated: '2023-11-01', status: 'EMBEDDED' },
-    { id: 'K3', title: 'Emergency Contact List v2', category: 'EMERGENCY', sourceType: 'TEXT', lastUpdated: '2023-11-18', status: 'EMBEDDED' },
-    { id: 'K4', title: 'Dormitory Living Guidelines', category: 'ACADEMIC', sourceType: 'PDF', lastUpdated: '2023-11-10', status: 'PENDING' },
-  ]);
+  const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchDocuments = async () => {
+    setIsLoading(true);
+    const result = await chatService.getDocuments();
+    if (result.success && result.data) {
+      const mappedDocs: KnowledgeItem[] = result.data.documents.map((doc: any) => ({
+        id: doc._id,
+        title: doc.title,
+        category: doc.category.toUpperCase() as any,
+        sourceType: doc.title.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC',
+        lastUpdated: doc.updatedAt.split('T')[0],
+        status: 'EMBEDDED'
+      }));
+      setKnowledge(mappedDocs);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
 
   const handleRebuild = () => {
     setIsRebuilding(true);
-    setTimeout(() => {
+    fetchDocuments().then(() => {
       setIsRebuilding(false);
-      setKnowledge(knowledge.map(k => ({...k, status: 'EMBEDDED'})));
-      alert("AI Knowledge Index rebuilt successfully!");
-    }, 2000);
+    });
   };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      const newItem: KnowledgeItem = {
-        id: `K-${Date.now()}`,
-        title: file.name,
-        category: 'SECURITY',
-        sourceType: file.name.endsWith('.pdf') ? 'PDF' : 'DOC',
-        lastUpdated: new Date().toISOString().split('T')[0],
-        status: 'PENDING'
-      };
-      setKnowledge([newItem, ...knowledge]);
+      setIsLoading(true);
+      const result = await chatService.uploadFile(file, 'safety');
+      if (result.success) {
+        await fetchDocuments();
+      } else {
+        alert(result.message || "Failed to upload document");
+      }
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to remove this document from the knowledge base?")) {
-      setKnowledge(knowledge.filter(k => k.id !== id));
+      const result = await chatService.deleteDocument(id);
+      if (result.success) {
+        setKnowledge(knowledge.filter(k => k.id !== id));
+      } else {
+        alert(result.message || "Failed to delete document");
+      }
     }
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
         accept=".pdf,.doc,.docx,.txt"
       />
-      
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-[#0F2A3D]">Knowledge Base Management</h2>
           <p className="text-gray-500">Maintain the ASTU Security & Policy RAG dataset.</p>
         </div>
-        <button 
+        <button
           onClick={handleRebuild}
           disabled={isRebuilding}
           className="bg-[#17A2B8] text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2 transition-all"
         >
           {isRebuilding ? (
-             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           ) : (
             <Icons.Book />
           )}
@@ -78,7 +98,7 @@ const AdminKnowledgeBase: React.FC = () => {
 
       {/* Action Cards */}
       <div className="grid md:grid-cols-3 gap-6">
-        <button 
+        <button
           onClick={handleUploadClick}
           className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center space-y-4 hover:border-[#17A2B8] transition-all border-dashed border-2 group active:scale-95"
         >
@@ -90,7 +110,7 @@ const AdminKnowledgeBase: React.FC = () => {
             <div className="text-xs text-gray-400 font-medium">Add PDF/DOC for AI Context</div>
           </div>
         </button>
-        <button 
+        <button
           onClick={() => alert("Simulation: AI Sandbox Environment starting...")}
           className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center space-y-4 hover:shadow-md transition-all active:scale-95"
         >
@@ -156,11 +176,11 @@ const AdminKnowledgeBase: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">
-                      <button 
+                      <button
                         onClick={() => handleDelete(item.id)}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
                       </button>
                     </div>
                   </td>

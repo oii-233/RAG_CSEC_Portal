@@ -6,7 +6,11 @@ import {
     uploadDocument,
     uploadFile,
     getDocuments,
-    deleteDocument
+    deleteDocument,
+    getChatHistory,
+    getConversations,
+    getConversationMessages,
+    deleteConversation
 } from '../controllers/chatController';
 import { protect, authorize } from '../middleware/auth';
 
@@ -105,6 +109,34 @@ router.post(
  * @access  Private
  */
 router.get('/documents', protect, getDocuments);
+
+/**
+ * @route   GET /api/chat/history
+ * @desc    Get chat history for current user
+ * @access  Private
+ */
+router.get('/history', protect, getChatHistory);
+
+/**
+ * @route   GET /api/chat/conversations
+ * @desc    Get all conversations for current user
+ * @access  Private
+ */
+router.get('/conversations', protect, getConversations);
+
+/**
+ * @route   GET /api/chat/conversations/:id/messages
+ * @desc    Get messages for a specific conversation
+ * @access  Private
+ */
+router.get('/conversations/:id/messages', protect, getConversationMessages);
+
+/**
+ * @route   DELETE /api/chat/conversations/:id
+ * @desc    Delete a conversation and its messages
+ * @access  Private
+ */
+router.delete('/conversations/:id', protect, deleteConversation);
 
 /**
  * @route   DELETE /api/chat/documents/:id

@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, User, Report, ReportStatus, ReportType } from './types';
+import { authService } from './services/authService';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import StudentDashboard from './pages/StudentDashboard';
@@ -16,6 +17,24 @@ const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'login' | 'app'>('landing');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (token && storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setView('app');
+        setActiveTab(parsedUser.role === UserRole.ADMIN ? 'admin-dashboard' : 'dashboard');
+      } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
 
   const [reports, setReports] = useState<Report[]>([
     { id: 'ASTU-10234', type: ReportType.SECURITY, category: 'Suspicious Activity', description: 'Unattended bag in Library hall.', location: 'Main Library, 2nd Floor', priority: 'High', status: ReportStatus.OPEN, createdAt: '2024-03-20 10:30', userId: 'U1' },
@@ -23,21 +42,41 @@ const App: React.FC = () => {
     { id: 'ASTU-10236', type: ReportType.SECURITY, category: 'Lost Item', description: 'Lost student ID near the cafeteria.', location: 'Cafeteria Entrance', priority: 'Low', status: ReportStatus.RESOLVED, createdAt: '2024-03-19 14:00', userId: 'U1' },
   ]);
 
-  const handleLogin = (role: UserRole, data?: any) => {
-    const mockUser: User = {
-      id: role === UserRole.ADMIN ? 'A1' : 'U1',
-      email: role === UserRole.ADMIN ? 'admin@astu.edu.et' : 'student@astu.edu.et',
-      name: role === UserRole.ADMIN ? 'Campus Registrar' : 'D. Bekele',
-      role: role,
-      universityId: role === UserRole.ADMIN ? 'ASTU/ADM/SEC-001' : 'ASTU/STU/10042'
-    };
-    setUser(mockUser);
-    setView('app');
-    setActiveTab(role === UserRole.ADMIN ? 'admin-dashboard' : 'dashboard');
+  const handleLogin = async (role: UserRole, data?: any) => {
+    setIsLoading(true);
+    setAuthError(null);
+    try {
+      let result;
+      if (data.name) {
+        // Signup
+        result = await authService.signup({ ...data, role: role.toLowerCase() });
+      } else {
+        // Login
+        result = await authService.login(data);
+      }
+
+      if (result.success && result.data) {
+        const formattedUser = authService.formatUser(result.data.user);
+        setUser(formattedUser);
+        localStorage.setItem('token', result.data.token);
+        localStorage.setItem('user', JSON.stringify(formattedUser));
+        setView('app');
+        setActiveTab(formattedUser.role === UserRole.ADMIN ? 'admin-dashboard' : 'dashboard');
+      } else {
+        setAuthError(result.message || 'Authentication failed');
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setAuthError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setView('landing');
     setIsChatOpen(false);
   };
@@ -93,11 +132,28 @@ const App: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const handleOpenChat = () => setIsChatOpen(true);
+    window.addEventListener('open-chatbot', handleOpenChat);
+    return () => window.removeEventListener('open-chatbot', handleOpenChat);
+  }, []);
+
+  if (isLoading) return <LoadingScreen role={UserRole.STUDENT} isLoading={isLoading} />;
   if (view === 'landing') return <LandingPage onGetStarted={() => setView('login')} />;
-  if (view === 'login') return <LoginPage onLogin={handleLogin} onBack={() => setView('landing')} />;
+  if (view === 'login') return (
+    <LoginPage
+      onLogin={handleLogin}
+      onBack={() => {
+        setView('landing');
+        setAuthError(null);
+      }}
+      error={authError}
+      isLoading={isLoading}
+    />
+  );
 
   return (
-    <div className="flex h-screen bg-[#F4F8FA]">
+    <div className="flex h-screen bg-[#F4F8FA] font-sans text-[#1F2933] overflow-hidden">
       <Sidebar
         role={user?.role || UserRole.STUDENT}
         activeTab={activeTab}
@@ -133,9 +189,28 @@ const App: React.FC = () => {
           {renderContent()}
         </div>
       </main>
-      <ChatBot isOpen={isChatOpen} setIsOpen={setIsChatOpen} onReportGenerated={onAIReportGenerated} />
+      <ChatBot user={user!} isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
     </div>
   );
 };
+
+interface LoadingScreenProps {
+  role: UserRole;
+  isLoading: boolean;
+}
+
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ role, isLoading }) => (
+  <div className="flex items-center justify-center min-h-screen bg-white">
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 border-4 border-[#17A2B8]/20 rounded-full"></div>
+        <div className="absolute inset-0 border-4 border-[#17A2B8] rounded-full border-t-transparent animate-spin"></div>
+      </div>
+      <div className="text-sm font-black text-[#0F2A3D] uppercase tracking-widest animate-pulse">
+        Initializing Security Node...
+      </div>
+    </div>
+  </div>
+);
 
 export default App;

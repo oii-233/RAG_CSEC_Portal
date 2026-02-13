@@ -140,17 +140,45 @@ export const extractTextFromFile = async (
     if (fileType === 'application/pdf' || fileType.endsWith('.pdf')) {
         try {
             console.log('📄 Attempting to parse PDF, buffer size:', buffer.length);
-            // Using dynamic require and handling potential default export for robustness
-            const pdfParseModule = require('pdf-parse');
-            const pdfExtract = typeof pdfParseModule === 'function' ? pdfParseModule : pdfParseModule.default;
 
-            if (typeof pdfExtract !== 'function') {
-                throw new Error('pdf-parse module did not export a function');
+            // Try multiple ways to get the parsing function
+            const pdfParseModule = require('pdf-parse');
+            let extractFunc: any = null;
+
+            if (typeof pdfParseModule === 'function') {
+                extractFunc = pdfParseModule;
+            } else if (pdfParseModule.default && typeof pdfParseModule.default === 'function') {
+                extractFunc = pdfParseModule.default;
+            } else if (typeof pdfParseModule.PDFParse === 'function') {
+                // For some forks that export a constructor or a specific PDFParse function
+                extractFunc = pdfParseModule.PDFParse;
             }
 
-            const data = await pdfExtract(buffer);
+            if (!extractFunc) {
+                console.error('❌ Keys in pdf-parse module:', Object.keys(pdfParseModule));
+                throw new Error('pdf-parse module structure unknown (no function or default export found)');
+            }
+
+            let data;
+            try {
+                // Try calling as a normal function (Standard pdf-parse)
+                data = await extractFunc(buffer);
+            } catch (callError) {
+                // If it's a class, we might need 'new'
+                console.log('⚠️ Standard call failed, trying as constructor...');
+                const instance = new extractFunc(buffer);
+                // Some class-based parsers need a .parse() or similar, or they are thenables
+                if (typeof instance.then === 'function') {
+                    data = await instance;
+                } else if (typeof instance.parse === 'function') {
+                    data = await instance.parse();
+                } else {
+                    throw callError; // Re-throw if we don't know how to use the instance
+                }
+            }
+
             console.log('✅ PDF parsed successfully, extracted characters:', data.text?.length || 0);
-            return data.text;
+            return data.text || '';
         } catch (error: any) {
             console.error('❌ Error parsing PDF details:', error);
             throw new Error(`Failed to extract text from PDF file: ${error.message}`);

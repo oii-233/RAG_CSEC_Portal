@@ -2,6 +2,8 @@ import { Response } from 'express';
 import axios, { AxiosResponse } from 'axios';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import DocumentModel, { IDocument } from '../models/Document';
+import Chat from '../models/Chat';
+import Conversation from '../models/Conversation';
 import { IAuthRequest } from '../types';
 import { chunkText, cleanText, extractTextFromFile, truncateText } from '../utils/textProcessing';
 
@@ -237,12 +239,60 @@ export const askQuestion = async (req: IAuthRequest, res: Response): Promise<voi
         // Step 3: Generate AI response with context (RAG generation)
         const aiResponse = await generateAIResponse(question, relevantDocs);
 
-        // Step 4: Return response
+        // Step 4: Handle Conversation
+        let { conversationId } = req.body;
+        let conversation;
+
+        if (conversationId) {
+            conversation = await Conversation.findOne({ _id: conversationId, user: req.user.id });
+            if (conversation) {
+                conversation.lastMessage = aiResponse.substring(0, 100);
+                await conversation.save();
+            }
+        }
+
+        if (!conversation) {
+            // Create new conversation if none provided or not found
+            // Use the question as title (truncated)
+            const title = question.length > 50 ? question.substring(0, 47) + '...' : question;
+            conversation = await Conversation.create({
+                user: req.user.id,
+                title,
+                lastMessage: aiResponse.substring(0, 100)
+            });
+            conversationId = conversation._id;
+        }
+
+        // Step 5: Save chat history to database
+        try {
+            // Save user message
+            await Chat.create({
+                user: req.user.id,
+                conversation: conversationId,
+                role: 'user',
+                text: question
+            });
+
+            // Save assistant response
+            await Chat.create({
+                user: req.user.id,
+                conversation: conversationId,
+                role: 'model',
+                text: aiResponse
+            });
+            console.log('💾 Chat history saved for user:', req.user.email);
+        } catch (dbError) {
+            console.error('❌ Error saving chat history:', dbError);
+            // Don't fail the request if saving history fails
+        }
+
+        // Step 6: Return response
         res.status(200).json({
             success: true,
             data: {
                 question,
                 answer: aiResponse,
+                conversationId,
                 sources: relevantDocs.map(doc => ({
                     id: doc._id,
                     title: doc.title,
@@ -588,5 +638,150 @@ export const deleteDocument = async (req: IAuthRequest, res: Response): Promise<
             message: 'Error deleting document',
             error: err.message
         });
+    }
+};
+/**
+ * @desc    Get chat history for current user
+ * @route   GET /api/chat/history
+ * @access  Private
+ */
+export const getChatHistory = async (req: IAuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({
+                success: false,
+                message: 'Not authorized'
+            });
+            return;
+        }
+
+        console.log('📜 Fetching chat history for user:', req.user.email);
+
+        const history = await Chat.find({ user: req.user.id })
+            .sort({ timestamp: 1 })
+            .limit(50); // Limit to last 50 messages for performance
+
+        res.status(200).json({
+            success: true,
+            data: {
+                messages: history.map(msg => ({
+                    role: msg.role,
+                    text: msg.text,
+                    timestamp: msg.timestamp
+                }))
+            }
+        });
+    } catch (error) {
+        const err = error as Error;
+        console.error('❌ Get history error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching chat history',
+            error: err.message
+        });
+    }
+};
+
+/**
+ * @desc    Get all conversations for current user
+ * @route   GET /api/chat/conversations
+ * @access  Private
+ */
+export const getConversations = async (req: IAuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({ success: false, message: 'Not authorized' });
+            return;
+        }
+
+        const conversations = await Conversation.find({ user: req.user.id })
+            .sort({ updatedAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            data: { conversations }
+        });
+    } catch (error) {
+        const err = error as Error;
+        console.error('❌ Get conversations error:', err);
+        res.status(500).json({ success: false, message: 'Error fetching conversations', error: err.message });
+    }
+};
+
+/**
+ * @desc    Get messages for a specific conversation
+ * @route   GET /api/chat/conversations/:id/messages
+ * @access  Private
+ */
+export const getConversationMessages = async (req: IAuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({ success: false, message: 'Not authorized' });
+            return;
+        }
+
+        const { id } = req.params;
+
+        // Verify conversation belongs to user
+        const conversation = await Conversation.findOne({ _id: id, user: req.user.id });
+        if (!conversation) {
+            res.status(404).json({ success: false, message: 'Conversation not found' });
+            return;
+        }
+
+        const messages = await Chat.find({ conversation: id })
+            .sort({ timestamp: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    text: msg.text,
+                    timestamp: msg.timestamp
+                }))
+            }
+        });
+    } catch (error) {
+        const err = error as Error;
+        console.error('❌ Get conversation messages error:', err);
+        res.status(500).json({ success: false, message: 'Error fetching messages', error: err.message });
+    }
+};
+
+/**
+ * @desc    Delete a conversation and its messages
+ * @route   DELETE /api/chat/conversations/:id
+ * @access  Private
+ */
+export const deleteConversation = async (req: IAuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({ success: false, message: 'Not authorized' });
+            return;
+        }
+
+        const { id } = req.params;
+
+        const conversation = await Conversation.findOne({ _id: id, user: req.user.id });
+        if (!conversation) {
+            res.status(404).json({ success: false, message: 'Conversation not found or access denied' });
+            return;
+        }
+
+        // Delete all messages in the conversation
+        await Chat.deleteMany({ conversation: id });
+
+        // Delete the conversation itself
+        await conversation.deleteOne();
+
+        res.status(200).json({
+            success: true,
+            message: 'Conversation and messages deleted successfully'
+        });
+    } catch (error) {
+        const err = error as Error;
+        console.error('❌ Delete conversation error:', err);
+        res.status(500).json({ success: false, message: 'Error deleting conversation', error: err.message });
     }
 };

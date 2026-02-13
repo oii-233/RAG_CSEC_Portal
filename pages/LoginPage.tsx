@@ -6,9 +6,11 @@ import { Icons } from '../constants';
 interface LoginPageProps {
   onLogin: (role: UserRole, data?: any) => void;
   onBack: () => void;
+  error?: string | null;
+  isLoading?: boolean;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBack }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBack, error, isLoading }) => {
   const [role, setRole] = useState<UserRole>(UserRole.STUDENT);
   const [isSignup, setIsSignup] = useState(false);
   const [name, setName] = useState('');
@@ -119,11 +121,31 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onBack }) => {
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 border-2 border-red-100 p-4 rounded-2xl flex items-center gap-3 animate-shake">
+              <div className="text-red-500 scale-125">
+                <Icons.Lock />
+              </div>
+              <p className="text-[10px] font-black text-red-600 uppercase tracking-widest leading-relaxed">
+                {error}
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-[#0F2A3D] text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-[#0F2A3D]/90 active:scale-[0.98] transition-all text-xs"
+            disabled={isLoading}
+            className={`w-full bg-[#0F2A3D] text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl active:scale-[0.98] transition-all text-xs flex items-center justify-center gap-3 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#0F2A3D]/90'
+              }`}
           >
-            {isSignup ? 'Register Now' : 'Log In Securely'}
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Initializing...
+              </>
+            ) : (
+              isSignup ? 'Register Now' : 'Log In Securely'
+            )}
           </button>
 
           <div className="text-center pt-2">

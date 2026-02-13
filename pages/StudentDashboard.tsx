@@ -29,8 +29,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, reports, onRe
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100">
-             <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-             <span className="text-[10px] font-black text-[#0F2A3D] uppercase tracking-widest">Campus Status: Secure</span>
+            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-[10px] font-black text-[#0F2A3D] uppercase tracking-widest">Campus Status: Secure</span>
           </div>
           {activeReportsCount > 0 && (
             <span className="text-[9px] font-black text-[#17A2B8] uppercase tracking-widest">
@@ -57,7 +57,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, reports, onRe
           <div className="bg-white/20 p-6 rounded-full text-white shadow-inner">
             <Icons.Shield />
           </div>
-          
+
           <div className="relative z-10 max-w-xl">
             <h3 className="text-6xl font-black text-white tracking-tighter mb-4">I REPORT IT</h3>
             <p className="text-white/80 font-bold text-xl leading-relaxed">
@@ -93,9 +93,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, reports, onRe
                     <div className="text-[10px] text-gray-400 uppercase tracking-widest">{report.location} • {report.createdAt}</div>
                   </div>
                 </div>
-                <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${
-                  report.status === ReportStatus.RESOLVED ? 'bg-green-50 text-green-600 border-green-100' : 'bg-yellow-50 text-yellow-600 border-yellow-100'
-                }`}>
+                <div className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${report.status === ReportStatus.RESOLVED ? 'bg-green-50 text-green-600 border-green-100' : 'bg-yellow-50 text-yellow-600 border-yellow-100'
+                  }`}>
                   {report.status}
                 </div>
               </div>
@@ -114,7 +113,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, reports, onRe
               Ask about emergency protocols, campus boundaries, or department office hours.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => onReportClick()}
             className="mt-8 flex items-center gap-2 font-black text-[#17A2B8] uppercase text-xs tracking-widest hover:translate-x-1 transition-transform"
           >
