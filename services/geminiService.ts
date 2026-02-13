@@ -2,7 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 const SYSTEM_INSTRUCTIONS = `
-You are the ASTU Smart Safety Assistant. 
+You are ዘብ AI, the ASTU Smart Safety Assistant. 
 You have two modes:
 
 MODE 1: POLICY ASSISTANCE (RAG)

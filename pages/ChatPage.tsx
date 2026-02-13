@@ -81,7 +81,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ user }) => {
         } else {
             setMessages(prev => [...prev, {
                 role: 'model',
-                text: result.message || "An error occurred while communicating with the safety assistant.",
+                text: result.message || "An error occurred while communicating with ዘብ AI.",
                 timestamp: new Date()
             }]);
         }
@@ -190,7 +190,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ user }) => {
                 <div className="h-16 flex items-center justify-center border-b border-gray-50 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <div className="text-[#17A2B8]"><Icons.Shield /></div>
-                        <span className="text-sm font-black text-[#0F2A3D] uppercase tracking-tighter">Safety Assistant <span className="text-[#17A2B8]">v2.0</span></span>
+                        <span className="text-sm font-black text-[#0F2A3D] uppercase tracking-tighter">Ask to <span className="text-[#17A2B8]">help</span></span>
                     </div>
                 </div>
 

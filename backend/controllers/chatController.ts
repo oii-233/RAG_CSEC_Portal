@@ -150,8 +150,8 @@ const generateAIResponse = async (
             });
         }
 
-        // System prompt for university safety assistant
-        const systemPrompt = `You are a helpful AI assistant for ASTU (Addis Science and Technology University) Smart Campus Safety Platform. Your role is to:
+        // System prompt for ዘብ AI assistant
+        const systemPrompt = `You are ዘብ AI, a helpful assistant for ASTU (Addis Science and Technology University) Smart Campus Safety Platform. Your role is to:
 
 1. Provide accurate information about campus safety procedures, emergency protocols, and resources
 2. Answer student questions about campus security, health services, and emergency contacts
@@ -182,7 +182,7 @@ Always prioritize student safety and well-being in your responses.`;
         }
 
         // Fallback response
-        return 'I apologize, but I\'m having trouble generating a response right now. Please try again later or contact campus security directly for urgent matters.';
+        return 'I apologize, but ዘብ AI is having trouble generating a response right now. Please try again later or contact campus security directly for urgent matters.';
     }
 };
 
@@ -704,7 +704,7 @@ export const getConversations = async (req: IAuthRequest, res: Response): Promis
     } catch (error) {
         const err = error as Error;
         console.error('❌ Get conversations error:', err);
-        res.status(500).json({ success: false, message: 'Error fetching conversations', error: err.message });
+        res.status(500).json({ success: false, message: 'Failed to access ዘብ AI', error: err.message });
     }
 };
 

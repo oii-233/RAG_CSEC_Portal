@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'login' | 'app'>('landing');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -160,17 +161,25 @@ const App: React.FC = () => {
         onTabChange={setActiveTab}
         onLogout={handleLogout}
         onReportClick={triggerAIReporting}
+        isOpen={isMobileSidebarOpen}
+        onToggle={setIsMobileSidebarOpen}
       />
-      <main className="flex-1 ml-64 overflow-y-auto relative">
+      <main className="flex-1 md:ml-64 overflow-y-auto relative min-h-screen">
         {/* Institutional Background Element */}
         <div className="fixed inset-0 pointer-events-none opacity-[0.015] flex items-center justify-center">
           <div className="scale-[5]"><Icons.ASTULogo /></div>
         </div>
 
-        <header className="h-24 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-12 sticky top-0 z-40 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-1.5 bg-[#17A2B8] rounded-full"></div>
-            <span className="font-black text-[#0F2A3D] text-2xl uppercase tracking-tighter">
+        <header className="h-20 md:h-24 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-4 md:px-12 sticky top-0 z-40 shadow-sm">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Icons.Layout />
+            </button>
+            <div className="h-8 md:h-10 w-1 bg-[#17A2B8] rounded-full hidden sm:block"></div>
+            <span className="font-black text-[#0F2A3D] text-lg md:text-2xl uppercase tracking-tighter truncate max-w-[150px] sm:max-w-none">
               {activeTab.replace('admin-', '').replace('-', ' ')}
             </span>
           </div>

@@ -25,7 +25,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ user, isOpen, setIsOpen }) => {
           />
 
           {/* Panel Container */}
-          <div className="absolute bottom-20 right-0 w-[90vw] md:w-[800px] h-[80vh] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-500">
+          <div className="fixed md:absolute bottom-0 md:bottom-20 right-0 w-full md:w-[800px] h-full md:h-[80vh] bg-white rounded-none md:rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-500">
             {/* Header with Close Button */}
             <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-white flex-shrink-0">
               <div className="flex items-center gap-2 px-2">

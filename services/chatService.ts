@@ -77,7 +77,7 @@ export const chatService = {
             return result;
         } catch (error) {
             console.error('Chat API error:', error);
-            return { success: false, message: 'Failed to connect to safety assistant' };
+            return { success: false, message: 'Failed to connect to ዘብ AI' };
         }
     },
 
