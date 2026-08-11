@@ -9,6 +9,92 @@ interface ChatPageProps {
 }
 
 const ChatPage: React.FC<ChatPageProps> = ({ user }) => {
+    /**
+     * Minimal Markdown -> HTML renderer (safe-ish):
+     * - Supports headings (#, ##, ###), bold (**text**), italic (*text*),
+     *   inline code (`code`), code blocks (```), unordered (-) and ordered lists.
+     * - Escapes HTML to avoid injection.
+     * This is intentionally small to avoid adding dependencies.
+     */
+    const escapeHtml = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const inlineFormat = (s: string) => {
+        let out = escapeHtml(s);
+        out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        out = out.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+        return out;
+    };
+
+    const renderMarkdown = (md: string) => {
+        if (!md) return '';
+        const lines = md.split(/\r?\n/);
+        let inCode = false;
+        let listType: 'ul' | 'ol' | null = null;
+        let html = '';
+
+        const closeList = () => {
+            if (listType === 'ul') html += '</ul>';
+            if (listType === 'ol') html += '</ol>';
+            listType = null;
+        };
+
+        for (let rawLine of lines) {
+            const line = rawLine;
+
+            if (line.trim().startsWith('```')) {
+                if (!inCode) {
+                    inCode = true;
+                    closeList();
+                    html += '<pre><code>';
+                } else {
+                    inCode = false;
+                    html += '</code></pre>';
+                }
+                continue;
+            }
+
+            if (inCode) {
+                html += escapeHtml(line) + '\n';
+                continue;
+            }
+
+            const h3 = line.match(/^###\s+(.*)$/);
+            const h2 = line.match(/^##\s+(.*)$/);
+            const h1 = line.match(/^#\s+(.*)$/);
+            const ul = line.match(/^\s*[-*]\s+(.*)$/);
+            const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+
+            if (h1) { closeList(); html += `<h1>${inlineFormat(h1[1])}</h1>`; continue; }
+            if (h2) { closeList(); html += `<h2>${inlineFormat(h2[1])}</h2>`; continue; }
+            if (h3) { closeList(); html += `<h3>${inlineFormat(h3[1])}</h3>`; continue; }
+
+            if (ul) {
+                if (listType !== 'ul') { closeList(); listType = 'ul'; html += '<ul>'; }
+                html += `<li>${inlineFormat(ul[1])}</li>`;
+                continue;
+            }
+
+            if (ol) {
+                if (listType !== 'ol') { closeList(); listType = 'ol'; html += '<ol>'; }
+                html += `<li>${inlineFormat(ol[1])}</li>`;
+                continue;
+            }
+
+            if (line.trim() === '') {
+                closeList(); html += '';
+                continue;
+            }
+
+            // Paragraph
+            closeList();
+            html += `<p>${inlineFormat(line)}</p>`;
+        }
+
+        closeList();
+        return html;
+    };
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -295,7 +381,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ user }) => {
                                         ? 'bg-white border-gray-100 text-[#0F2A3D] font-medium'
                                         : 'bg-[#F4F8FA] border-transparent text-gray-800'
                                         }`}>
-                                        <div className="whitespace-pre-wrap">{msg.text}</div>
+                                        <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
                                         <div className="mt-4 text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                             <Icons.Lock />
                                             {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
