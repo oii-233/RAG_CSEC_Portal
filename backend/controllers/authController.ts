@@ -307,7 +307,7 @@ export const updateProfile = async (req: IAuthRequest, res: Response): Promise<v
  * @route   GET /api/auth/users
  * @access  Private/Admin
  */
-export const getUsers = async (req: IAuthRequest, res: Response): Promise<void> => {
+export const getUsers = async (_req: IAuthRequest, res: Response): Promise<void> => {
     try {
         const users = await User.find({}).sort({ createdAt: -1 });
         res.status(200).json({
